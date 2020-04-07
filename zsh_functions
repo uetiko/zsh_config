@@ -1,4 +1,4 @@
-function edit_file_finder() {
+function finder_edit() {
   vim $(find $@ -type f | fzf --preview 'cat {}')
 }
 
@@ -11,3 +11,5 @@ function search_history(){
 zle -N search_history
 bindkey '^r' search_history
 
+zle -N finder_edit
+bindkey '^e' finder_edit
