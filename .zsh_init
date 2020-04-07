@@ -1,0 +1,13 @@
+if [ -f ~/.zsh_functions ]
+then
+  source ~/.zsh_functions
+else
+  echo -e "\e[31m The file of custom functions not exist.\e[0m"
+fi
+
+if [ -f ~/.zshenv ]
+then
+  source ~/.zsh_code
+else
+  echo -e "\e[31m You don't have the file zshenv.\e[0m"
+fi

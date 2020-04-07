@@ -1,0 +1,9 @@
+################################################
+# Node version manager
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+################################################
+# 
+# ssh config
+#
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/uetiko

@@ -1,0 +1,13 @@
+function edit_file_finder() {
+  vim $(find $@ -type f | fzf --preview 'cat {}')
+}
+
+
+function search_history(){
+  local selected_command=$(fc -rl 1 | awk '{$1="";print substr($0,2)}' | fzf)
+  LBUFFER=$selected_command
+}
+
+zle -N search_history
+bindkey '^r' search_history
+
