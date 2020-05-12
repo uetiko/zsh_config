@@ -1,0 +1,2 @@
+alias infrastructure_directory='cd /opt/infrastrucure'
+alias source_directory='cd /opt/source'

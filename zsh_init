@@ -1,3 +1,5 @@
+source ~/.zsh_alias
+
 if [ -f ~/.zsh_functions ]
 then
   source ~/.zsh_functions
