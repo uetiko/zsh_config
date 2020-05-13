@@ -36,3 +36,11 @@ function git_search_log(){
         less -R'
       ) << 'FZF-EOF' {} FZF-EOF" --preview-window=right:60%
 }
+
+function docker_stop_all(){
+  echo -e "\e[94m"
+  docker ps
+  echo -e "\e[92mCONTAINER ID\e[93m"
+  docker ps | awk '{print $1}' | xargs docker stop
+  echo -e "\e[39m"
+}
