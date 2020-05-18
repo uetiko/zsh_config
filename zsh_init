@@ -9,6 +9,7 @@ fi
 
 if [ -f ~/.zshenv ]
 then
+  source ~/.zshenv
   source ~/.zsh_code
 else
   echo -e "\e[31m You don't have the file zshenv.\e[0m"

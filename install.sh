@@ -18,9 +18,9 @@ function make_symbolics_links() {
 function add_init() {
   if [ -f ~/.zshrc ]
   then
-    echo "source ~/.zsh_init" > ~/.zshrc
+    echo "source ~/.zsh_init" >> ~/.zshrc
   else
-    echo -e "\e[31m The zshrf file don't exist \e[0m"
+    echo -e "\e[31m The zshrc file don't exist \e[0m"
   fi
 
 }

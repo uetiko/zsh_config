@@ -2,7 +2,6 @@ function finder_edit() {
   vim $(find $@ -type f | fzf --preview 'cat {}')
 }
 
-
 function search_history(){
   local selected_command=$(fc -rl 1 | awk '{$1="";print substr($0,2)}' | fzf)
   LBUFFER=$selected_command
@@ -80,6 +79,6 @@ function docker_stop() {
   [ -n "$cid" ] && docker stop "$cid"
 }
 
-man_find() {
+man_finder() {
   man -k . | fzf --prompt='Man> ' | awk '{print $1}' | xargs -r man
 }
