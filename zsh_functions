@@ -82,3 +82,18 @@ function docker_stop() {
 man_finder() {
   man -k . | fzf --prompt='Man> ' | awk '{print $1}' | xargs -r man
 }
+
+#Use only with root
+function apt_finder_installer(){
+  apt-cache search $@ | fzf --ansi --no-sort --reverse \
+    | awk '{print $1}' | xargs -r apt-get install
+}
+
+function list_enviroments(){
+  printenv | fzf
+}
+
+function count_files_by_exstension() {
+  find $@ -type f | awk -F . '{print $NF}' | sort | uniq -c \
+    | awk '{print $2,$1}' | fzf
+}
