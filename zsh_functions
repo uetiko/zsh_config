@@ -3,7 +3,7 @@ function finder_edit() {
 }
 
 function search_history(){
-  local selected_command=$(fc -rl 1 | awk '{$1="";print substr($0,2)}' | sort | uniq | fzf)
+  local selected_command=$(fc -rl 1 | awk '{$1="";print substr($0,2)}' | sort | uniq | fzf --border --color=bg+:24)
   LBUFFER=$selected_command
 }
 
@@ -85,7 +85,7 @@ man_finder() {
 
 #Use only with root
 function apt_finder_installer(){
-  apt-cache search $@ | fzf --ansi --no-sort --reverse \
+  apt-cache search $@ | fzf -m --ansi --no-sort --reverse --inline-info \
     | awk '{print $1}' | xargs -r apt-get install
 }
 
@@ -96,4 +96,9 @@ function list_enviroments(){
 function count_files_by_exstension() {
   find $@ -type f | awk -F . '{print $NF}' | sort | uniq -c \
     | awk '{print $2,$1}' | fzf
+}
+
+function preview_file_finder() {
+  find $@ -type f | fzf --preview="cat {-1}" --header-lines=1 --color=bg+:24 \
+    --bind "alt-j:preview-down,alt-k:preview-up,ctrl-f:preview-page-down,ctrl-b:preview-page-up"
 }
