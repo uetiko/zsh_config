@@ -1,2 +1,2 @@
-alias infrastructure_directory='cd /opt/infrastrucure'
-alias source_directory='cd /opt/source'
+alias infrastructure_directory='cd ~/improvement/infrastructure/'
+alias source_directory='cd ~/improvement/infrastructure/docker/simples/shared/projects/'
