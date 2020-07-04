@@ -95,12 +95,6 @@ man_finder() {
   man -k . | fzf --prompt='Man> ' | awk '{print $1}' | xargs -r man
 }
 
-#Use only with root
-function apt_finder_installer(){
-  apt-cache search $@ | fzf -m --ansi --reverse --inline-info \
-    | awk '{print $1}' | xargs -r apt-get install -y
-}
-
 function list_enviroments(){
   printenv | fzf --border
 }
@@ -114,4 +108,19 @@ function preview_file_finder() {
   find $@ -type f | fzf --preview="cat {-1}" --header-lines=1 --color=bg+:24 \
     --bind "alt-j:preview-down,alt-k:preview-up,ctrl-f:preview-page-down,ctrl-b:preview-page-up" \
     --inline-info --border --tabstop=2 --border
+}
+
+#Use only with root
+function apt_finder_installer(){
+  apt-cache search $@ | fzf -m --ansi --reverse --inline-info \
+    | awk '{print $1}' | xargs -r apt-get install -y
+}
+
+function droidcam_up(){
+    adb start-server
+    droidcam-cli -v adb 4747
+}
+
+function kill_adb_server(){
+  adb kill-server
 }
