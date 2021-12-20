@@ -81,7 +81,7 @@ function docker_remove_image(){
   local cid
   cid=$(docker images | fzf -q "$1" | awk '{print $3}')
 
-  [ -n "$cid" ] && docker rmi "$cid"
+  [ -n "$cid" ] && docker rmi -f "$cid"
 }
 
 function docker_stop() {
@@ -123,4 +123,8 @@ function droidcam_up(){
 
 function kill_adb_server(){
   adb kill-server
+}
+
+function docker_remove_volumens(){
+  docker volume ls -qf dangling=true | xargs -r docker volume rm
 }
