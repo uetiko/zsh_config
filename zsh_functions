@@ -36,7 +36,7 @@ function git_fetch_all_branch() {
 }
 
 function git_search_log(){
-  git log --graph --color=always \
+  git log --graph --color=always --no-merges \
     --format="%C(auto)%h%d %s %C(black)%C(bold)%cr"  | \
     fzf --ansi --no-sort --reverse --tiebreak=index --preview \
     'f() { set -- $(echo -- "$@" | grep -o "[a-f0-9]\{7\}"); [ $# -eq 0 ] || git show --color=always $1 ; }; f {}' \
@@ -127,4 +127,12 @@ function kill_adb_server(){
 
 function docker_remove_volumens(){
   docker volume ls -qf dangling=true | xargs -r docker volume rm
+}
+
+function git_activiy() {
+  git for-each-ref --sort=-committerdate refs/remotes --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20  
+}
+
+function git_change_branch(){
+  git for-each-ref --sort='-authordate' --format='%1B[0;34m%(refname:short)%1B[m ===> %1B[1;35m%(subject)' refs/heads | sed -e 's-refs/heads/--' | fzf --ansi -m --reverse | awk '{print $1}' | xargs git checkout
 }
