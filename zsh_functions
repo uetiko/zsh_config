@@ -130,9 +130,21 @@ function docker_remove_volumens(){
 }
 
 function git_activiy() {
-  git for-each-ref --sort=-committerdate refs/remotes --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20  
+  git for-each-ref --sort=-committerdate refs/remotes/azure --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20  
 }
 
 function git_change_branch(){
   git for-each-ref --sort='-authordate' --format='%1B[0;34m%(refname:short)%1B[m ===> %1B[1;35m%(subject)' refs/heads | sed -e 's-refs/heads/--' | fzf --ansi -m --reverse | awk '{print $1}' | xargs git checkout
+}
+
+git_add_patch_file(){
+  git status --untracked-files=no | fzf --reverse | awk '{print $2}' | xargs git add -p
+}
+
+git_pull_current_branch(){
+  git branch --show-current | xargs git pull $@
+}
+
+git_push_current_branch(){
+  git branch --show-current | xargs git push $@
 }
