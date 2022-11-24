@@ -28,11 +28,11 @@ bindkey '^e' finder_edit
 function git_fetch_all_branch() {
   git branch -r | grep -v '\->' | while read remote;
   do
-    git branch --track "${remote#uetiko/}" "$remote"; 
+    git branch --track "${remote#azure/}" "$remote"; 
   done
 
-  git fetch --all
-  git pull --all
+  git fetch --all $@
+  git pull --all $@
 }
 
 function git_search_log(){
