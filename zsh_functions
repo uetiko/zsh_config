@@ -1,9 +1,9 @@
 function finder_edit() {
-  vim $(find $@ -type f | fzf --preview 'cat {}')
+  find -name "*$@*" -type f | fzf --preview 'cat {}' | xargs vim 
 }
 
 function finder() {
-  find $@ -type f | fzf --preview 'cat {}'
+  find -name "*$@*" -type f | fzf --preview 'cat {}'
 }
 
 function kill_finder() {
@@ -20,19 +20,20 @@ function search_history(){
 }
 
 zle -N search_history
-bindkey '^r' search_history
+bindkey '^f' search_history
 
-zle -N finder_edit
-bindkey '^e' finder_edit
+zle -N finder
+bindkey '^e' finder
 
 function git_fetch_all_branch() {
-  git branch -r | grep -v '\->' | while read remote;
-  do
-    git branch --track "${remote#azure/}" "$remote"; 
-  done
+    remote_name="$1"
+    git stash
+    git remote update "$remote_name" 2>/dev/null
 
-  git fetch --all $@
-  git pull --all $@
+    for branch in `git branch -r | grep "$remote_name/" | grep -v HEAD`; do
+        git branch --track --force "${branch##*/}" "$branch" 2>/dev/null
+    done
+    git stash apply
 }
 
 function git_search_log(){
@@ -58,23 +59,142 @@ function docker_stop_all(){
 
 function cd() {
   if [[ "$#" != 0 ]]; then
-    builtin cd "$@";
+    builtin cd "$@"
     return
   fi
-  while true;
-  do
-    local lsd=$(echo ".." && ls -p | grep '/$' | sed 's;/$;;')
-    local dir="$(printf '%s\n' "${lsd[@]}" |
-      fzf --reverse --preview '
-          __cd_nxt="$(echo {})";
-          __cd_path="$(echo $(pwd)/${__cd_nxt} | sed "s;//;/;")";
-          echo $__cd_path;
-          echo;
-          ls -p --color=always "${__cd_path}";
-          ')"
-          [[ ${#dir} != 0 ]] || return 0
-          builtin cd "$dir" &> /dev/null
+
+  while true; do
+    local lsd=$(echo ".." && ls -p 2>/dev/null | grep '/$' | sed 's;/$;;')
+    local dir="$(printf '%s\n' "${lsd[@]}" | fzf \
+      --height=60% \
+      --layout=reverse \
+      --border=rounded \
+      --info=inline \
+      --prompt='📁 Directory: ' \
+      --header='🚀 Navigate directories (ESC to exit, ENTER to select)' \
+      --preview-window='right:50%:wrap' \
+      --preview "
+        __cd_nxt={};
+        if [[ \$__cd_nxt == \"..\" ]]; then
+          __cd_path=\$(dirname \"\$(pwd)\");
+          echo \"📂 Parent Directory: \$__cd_path\";
+        else
+          __cd_path=\"\$(pwd)/\$__cd_nxt\";
+        fi;
+        echo \"📍 Path: \$__cd_path\";
+        echo;
+        if [[ -d \$__cd_path ]]; then
+          echo \"📄 Contents:\";
+          ls -la --color=always \$__cd_path 2>/dev/null | head -20;
+        else
+          echo \"❌ Directory not accessible\";
+        fi
+      " \
+      --bind 'ctrl-h:toggle-preview' \
+      --bind 'ctrl-u:preview-page-up' \
+      --bind 'ctrl-d:preview-page-down' \
+      --bind 'ctrl-y:execute-silent(echo -n {q} | pbcopy)' \
+      --color='fg:#ebdbb2,bg:#282828,hl:#fabd2f,fg+:#ebdbb2,bg+:#3c3836,hl+:#fabd2f' \
+      --color='info:#83a598,prompt:#bdae93,spinner:#fabd2f,pointer:#83a598,marker:#fe8019,header:#665c54')"
+
+    [[ ${#dir} != 0 ]] || return 0
+
+    if [[ "$dir" == ".." ]]; then
+      if ! builtin cd ..; then
+        echo "❌ Cannot navigate to parent directory" >&2
+        continue
+      fi
+    else
+      if ! builtin cd "$dir" 2>/dev/null; then
+        echo "❌ Cannot access directory: $dir" >&2
+        continue
+      fi
+    fi
+
+    echo "📍 Current directory: $(pwd)"
   done
+}
+
+function cdf() {
+  local dir
+
+  {
+    echo ".."
+    ls -p 2>/dev/null | grep '/$' | sed 's;/$;;'
+    # Si tienes z o fasd instalado, puedes agregar:
+    # z -l 2>/dev/null | awk '{print $2}' | grep -v "^$(pwd)$"
+  } | fzf \
+    --height=70% \
+    --layout=reverse \
+    --border=rounded \
+    --info=inline \
+    --prompt='🔍 Quick CD: ' \
+    --header='🎯 Recent & Current directories (Tab for multi-select)' \
+    --preview-window='right:50%:wrap:hidden' \
+    --preview '
+      if [[ {} == ".." ]]; then
+        target="$(dirname "$(pwd)")";
+      elif [[ {} == /* ]]; then
+        target="{}";
+      else
+        target="$(pwd)/{}";
+      fi;
+      echo "📂 Target: $target";
+      echo;
+      if [[ -d "$target" ]]; then
+        ls -la --color=always "$target" 2>/dev/null | head -15;
+      fi
+    ' \
+    --bind 'tab:toggle-preview' \
+    --bind 'ctrl-/:change-preview-window(down|hidden|)' \
+    --bind 'ctrl-y:execute-silent(echo -n {} | pbcopy)' \
+    --bind 'alt-up:preview-page-up' \
+    --bind 'alt-down:preview-page-down'
+
+  if [[ -n "$dir" ]]; then
+    if [[ "$dir" == ".." ]]; then
+      builtin cd ..
+    elif [[ "$dir" == /* ]]; then
+      builtin cd "$dir"
+    else
+      builtin cd "$dir"
+    fi
+  fi
+}
+
+function cdt() {
+  local selected_path
+
+  if command -v tree >/dev/null 2>&1; then
+    selected_path=$(tree -d -L 3 -a -I '.git' | fzf \
+      --height=80% \
+      --layout=reverse \
+      --border=rounded \
+      --ansi \
+      --prompt='🌳 Tree Navigation: ' \
+      --header='📁 Navigate directory tree' \
+      --preview 'echo {} | sed "s/.*─ //" | xargs -I {} sh -c "if [[ -d \"{}\" ]]; then ls -la --color=always \"{}\"; fi"' \
+      --preview-window='right:50%:wrap' \
+      | sed 's/.*─ //')
+  elif command -v fd >/dev/null 2>&1; then
+    selected_path=$(fd -t d -d 3 | fzf \
+      --height=70% \
+      --layout=reverse \
+      --border=rounded \
+      --prompt='📁 Directory Search: ' \
+      --preview 'ls -la --color=always {}' \
+      --preview-window='right:50%:wrap')
+  else
+    selected_path=$(find . -type d -maxdepth 3 -not -path '*/\.*' | fzf \
+      --height=70% \
+      --layout=reverse \
+      --border=rounded \
+      --prompt='📁 Find Directories: ' \
+      --preview 'ls -la --color=always {}' \
+      --preview-window='right:50%:wrap')
+  fi
+
+  [[ -n "$selected_path" ]] && builtin cd "$selected_path"
 }
 
 function docker_remove_image(){
@@ -130,7 +250,7 @@ function docker_remove_volumens(){
 }
 
 function git_activiy() {
-  git for-each-ref --sort=-committerdate refs/remotes/azure --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20  
+  git for-each-ref --sort=-committerdate refs/remotes/azure --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20
 }
 
 function git_change_branch(){
