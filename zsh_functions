@@ -7,7 +7,51 @@ function finder() {
 }
 
 function kill_finder() {
-  ps -fea | fzf | awk '{print $2}' | xargs kill -9
+  local pid
+  local signal=${1:-9}
+
+  pid=$(ps -ef |
+    sed 1d |
+    fzf --height=60% \
+        --layout=reverse \
+        --border=rounded \
+        --info=inline \
+        --multi \
+        --prompt='🔍 Procesos: ' \
+        --header='⚠️ Selección de procesos para terminar (TAB: multi-selección, ENTER: confirmar)' \
+        --preview-window='down:3:wrap' \
+        --preview 'echo {}; echo;
+                  pid=$(echo {} | awk "{print \$2}");
+                  echo "PID: $pid";
+                  echo "Detalles del proceso:";
+                  ps -p $pid -o pid,ppid,user,%cpu,%mem,vsz,rss,tty,stat,start,time,args --no-headers;
+                  echo;
+                  echo "Archivos abiertos:";
+                  lsof -p $pid 2>/dev/null | head -5;
+                  echo;
+                  echo "Árbol de procesos:";
+                  pstree -p $pid 2>/dev/null || echo "No disponible"' \
+        --bind 'ctrl-r:reload(ps -ef | sed 1d)' \
+        --bind 'ctrl-/:change-preview-window(down:50%|hidden|)' \
+        --color='fg:#ebdbb2,bg:#282828,hl:#fabd2f,fg+:#ebdbb2,bg+:#3c3836,hl+:#fabd2f' \
+        --color='info:#83a598,prompt:#bdae93,spinner:#fabd2f,pointer:#83a598,marker:#fe8019,header:#665c54' |
+    awk '{print $2}')
+
+  if [[ -n "$pid" ]]; then
+    echo -e "\033[31mProcesos seleccionados para terminar:\033[0m"
+    ps -p "$pid" -o pid,user,cmd
+    echo -e "\033[33m¿Estás seguro de querer enviar la señal $signal a estos procesos? (s/N)\033[0m"
+    read -r confirm
+
+    if [[ "$confirm" =~ ^[Ss]$ ]]; then
+      echo "$pid" | xargs -r kill -"$signal"
+      echo -e "\033[32mSeñal enviada.\033[0m"
+    else
+      echo -e "\033[33mOperación cancelada.\033[0m"
+    fi
+  else
+    echo -e "\033[33mNingún proceso seleccionado.\033[0m"
+  fi
 }
 
 function ctagReferences(){
@@ -15,8 +59,28 @@ function ctagReferences(){
 }
 
 function search_history(){
-  local selected_command=$(fc -rl 1 | awk '{$1="";print substr($0,2)}' | sort | uniq | fzf --border --color=bg+:24)
-  LBUFFER=$selected_command
+    local selected_command=$(fc -rl 1 |
+        awk '{cmd=$0; sub(/^[ \t]*[0-9]+[ \t]+/, "", cmd); if (!seen[cmd]++) print $0}' |
+        fzf --height=60% \
+            --layout=reverse \
+            --border=rounded \
+            --info=inline \
+            --prompt='🔍 Historia: ' \
+            --header='📜 Historial de comandos (ESC para salir, ENTER para seleccionar)' \
+            --preview-window='down:3:wrap' \
+            --preview 'echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" | bat --color=always --language=bash --style=numbers' \
+            --bind 'ctrl-y:execute-silent(echo -n {q} | pbcopy)' \
+            --bind 'ctrl-e:execute(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" > /tmp/cmd.sh && ${EDITOR:-vim} /tmp/cmd.sh)' \
+            --bind 'ctrl-x:execute(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" | xargs -I % bash -c %)' \
+            --color='fg:#ebdbb2,bg:#282828,hl:#fabd2f,fg+:#ebdbb2,bg+:#3c3836,hl+:#fabd2f' \
+            --color='info:#83a598,prompt:#bdae93,spinner:#fabd2f,pointer:#83a598,marker:#fe8019,header:#665c54' |
+        sed 's/^[ \t]*[0-9]\+[ \t]\+//')
+
+      if [[ -n "$selected_command" ]]; then
+        BUFFER="$selected_command"
+        CURSOR=${#BUFFER}
+        zle redisplay
+      fi
 }
 
 zle -N search_history
