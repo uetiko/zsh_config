@@ -6,4 +6,4 @@
 # ssh config
 #
 eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/uetiko
+#ssh-add ~/.ssh/uetiko

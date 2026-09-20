@@ -6,8 +6,4 @@ export FZF_DEFAULT_OPTS='
   --color=marker:#719e07,fg+:#839496,prompt:#719e07,hl+:#719e07
   '
 
-export VIRTUALENVWRAPPER_PYTHON=$(which python3)
-export WORKON_HOME=~/improvement/python/envs/
-source /home/uetiko/.local/bin/virtualenvwrapper.sh
-source $HOME/.cargo/env
-
+export PATH="$HOME/.local/bin:$PATH"

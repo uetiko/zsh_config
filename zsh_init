@@ -13,4 +13,15 @@ then
 else
   echo -e "\e[31m You don't have the file zshenv.\e[0m"
 fi
-source ~/.zsh_alias
+
+if [ -f ~/.zshenv.local ]
+then
+  source ~/.zshenv.local
+fi
+
+if [ -f ~/.zsh_alias ]
+then
+  source ~/.zsh_alias
+else
+  echo -e "\e[31m The file of custom aliases not exist.\e[0m"
+fi

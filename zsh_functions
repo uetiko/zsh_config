@@ -59,6 +59,10 @@ function ctagReferences(){
 }
 
 function search_history(){
+    local tmpfile
+    tmpfile=$(mktemp /tmp/search_history_edit.XXXXXX)
+    export __SEARCH_HISTORY_EDIT_FILE="$tmpfile"
+
     local selected_command=$(fc -rl 1 |
         awk '{cmd=$0; sub(/^[ \t]*[0-9]+[ \t]+/, "", cmd); if (!seen[cmd]++) print $0}' |
         fzf --height=60% \
@@ -69,12 +73,18 @@ function search_history(){
             --header='📜 Historial de comandos (ESC para salir, ENTER para seleccionar)' \
             --preview-window='down:3:wrap' \
             --preview 'echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" | bat --color=always --language=bash --style=numbers' \
-            --bind 'ctrl-y:execute-silent(echo -n {q} | pbcopy)' \
-            --bind 'ctrl-e:execute(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" > /tmp/cmd.sh && ${EDITOR:-vim} /tmp/cmd.sh)' \
-            --bind 'ctrl-x:execute(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" | xargs -I % bash -c %)' \
+            --bind 'ctrl-y:execute-silent(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" | wl-copy)' \
+            --bind 'ctrl-e:execute(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" > "$__SEARCH_HISTORY_EDIT_FILE" && ${EDITOR:-vim} "$__SEARCH_HISTORY_EDIT_FILE")+abort' \
+            --bind 'ctrl-x:execute(echo {} | sed "s/^[ \t]*[0-9]\+[ \t]\+//" | xargs -I % zsh -c %)' \
             --color='fg:#ebdbb2,bg:#282828,hl:#fabd2f,fg+:#ebdbb2,bg+:#3c3836,hl+:#fabd2f' \
             --color='info:#83a598,prompt:#bdae93,spinner:#fabd2f,pointer:#83a598,marker:#fe8019,header:#665c54' |
         sed 's/^[ \t]*[0-9]\+[ \t]\+//')
+
+      if [[ -s "$tmpfile" ]]; then
+        selected_command=$(<"$tmpfile")
+      fi
+      rm -f "$tmpfile"
+      unset __SEARCH_HISTORY_EDIT_FILE
 
       if [[ -n "$selected_command" ]]; then
         BUFFER="$selected_command"
@@ -90,14 +100,21 @@ zle -N finder
 bindkey '^e' finder
 
 function git_fetch_all_branch() {
-    remote_name="$1"
-    git stash
+    local remote_name="$1"
+    local stashed=0
+
+    if [[ -n "$(git status --porcelain)" ]]; then
+      git stash
+      stashed=1
+    fi
+
     git remote update "$remote_name" 2>/dev/null
 
     for branch in `git branch -r | grep "$remote_name/" | grep -v HEAD`; do
         git branch --track --force "${branch##*/}" "$branch" 2>/dev/null
     done
-    git stash apply
+
+    [[ "$stashed" == 1 ]] && git stash pop
 }
 
 function git_search_log(){
@@ -157,7 +174,7 @@ function cd() {
       --bind 'ctrl-h:toggle-preview' \
       --bind 'ctrl-u:preview-page-up' \
       --bind 'ctrl-d:preview-page-down' \
-      --bind 'ctrl-y:execute-silent(echo -n {q} | pbcopy)' \
+      --bind 'ctrl-y:execute-silent(echo -n {q} | wl-copy)' \
       --color='fg:#ebdbb2,bg:#282828,hl:#fabd2f,fg+:#ebdbb2,bg+:#3c3836,hl+:#fabd2f' \
       --color='info:#83a598,prompt:#bdae93,spinner:#fabd2f,pointer:#83a598,marker:#fe8019,header:#665c54')"
 
@@ -211,7 +228,7 @@ function cdf() {
     ' \
     --bind 'tab:toggle-preview' \
     --bind 'ctrl-/:change-preview-window(down|hidden|)' \
-    --bind 'ctrl-y:execute-silent(echo -n {} | pbcopy)' \
+    --bind 'ctrl-y:execute-silent(echo -n {} | wl-copy)' \
     --bind 'alt-up:preview-page-up' \
     --bind 'alt-down:preview-page-down'
 

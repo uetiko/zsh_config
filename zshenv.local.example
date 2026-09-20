@@ -1,0 +1,10 @@
+# Config específica de esta máquina — copia este archivo a `zshenv.local`
+# (sin versionar, ver .gitignore) y ajusta los valores según el hardware
+# y las herramientas instaladas localmente.
+#
+# install.sh symlinkea ~/.zshenv.local -> ./zshenv.local si existe, y
+# zsh_init lo sourcea automáticamente cuando está presente.
+
+export VIRTUALENVWRAPPER_PYTHON=$(which python3)
+export OLLAMA_NUM_THREADS=$(($(nproc)-2))
+export OLLAMA_MAX_LOADED_MODELS=1
