@@ -1,6 +1,3 @@
-function finder_edit() {
-  find -name "*$@*" -type f | fzf --preview 'cat {}' | xargs vim 
-}
 
 function finder() {
   find -name "*$@*" -type f | fzf --preview 'cat {}'
@@ -94,10 +91,10 @@ function search_history(){
 }
 
 zle -N search_history
-bindkey '^f' search_history
+bindkey '^[r' search_history
 
 zle -N finder
-bindkey '^e' finder
+bindkey '^[f' finder
 
 function git_fetch_all_branch() {
     local remote_name="$1"
@@ -110,7 +107,14 @@ function git_fetch_all_branch() {
 
     git remote update "$remote_name" 2>/dev/null
 
+    local current_branch=$(git symbolic-ref --short HEAD)
+
     for branch in `git branch -r | grep "$remote_name/" | grep -v HEAD`; do
+        if [[ "${branch##*/}" == "$current_branch" ]]; then
+            echo "Skipping ${branch##*/}: it is the active branch"
+            continue
+        fi
+
         git branch --track --force "${branch##*/}" "$branch" 2>/dev/null
     done
 
@@ -210,7 +214,7 @@ function cdf() {
     --border=rounded \
     --info=inline \
     --prompt='🔍 Quick CD: ' \
-    --header='🎯 Recent & Current directories (Tab for multi-select)' \
+    --header='🎯 .. and immediate subdirectories of current directory' \
     --preview-window='right:50%:wrap:hidden' \
     --preview '
       if [[ {} == ".." ]]; then
@@ -247,16 +251,15 @@ function cdt() {
   local selected_path
 
   if command -v tree >/dev/null 2>&1; then
-    selected_path=$(tree -d -L 3 -a -I '.git' | fzf \
+    selected_path=$(tree -dfi -L 3 -a -I '.git' | fzf \
       --height=80% \
       --layout=reverse \
       --border=rounded \
       --ansi \
       --prompt='🌳 Tree Navigation: ' \
       --header='📁 Navigate directory tree' \
-      --preview 'echo {} | sed "s/.*─ //" | xargs -I {} sh -c "if [[ -d \"{}\" ]]; then ls -la --color=always \"{}\"; fi"' \
-      --preview-window='right:50%:wrap' \
-      | sed 's/.*─ //')
+      --preview 'if [[ -d "{}" ]]; then ls -la --color=always "{}"; fi' \
+      --preview-window='right:50%:wrap')
   elif command -v fd >/dev/null 2>&1; then
     selected_path=$(fd -t d -d 3 | fzf \
       --height=70% \
@@ -306,7 +309,7 @@ function count_files_by_exstension() {
 }
 
 function preview_file_finder() {
-  find $@ -type f | fzf --preview="cat {-1}" --header-lines=1 --color=bg+:24 \
+  find $@ -type f | fzf --preview="cat {-1}" --color=bg+:24 \
     --bind "alt-j:preview-down,alt-k:preview-up,ctrl-f:preview-page-down,ctrl-b:preview-page-up" \
     --inline-info --border --tabstop=2 --border
 }
@@ -331,15 +334,20 @@ function docker_remove_volumens(){
 }
 
 function git_activiy() {
-  git for-each-ref --sort=-committerdate refs/remotes/azure --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20
+  if [[ -z "$1" ]]; then
+    echo "Error: remote name is required" >&2
+    return 1
+  fi
+
+  git for-each-ref --sort=-committerdate "refs/remotes/$1" --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(color:red)%(objectname:short)%(color:reset) - %(contents:subject) - %(authorname) %(authoremail) - (%(color:green)%(committerdate:relative)%(color:reset))' --count=20
 }
 
 function git_change_branch(){
-  git for-each-ref --sort='-authordate' --format='%1B[0;34m%(refname:short)%1B[m ===> %1B[1;35m%(subject)' refs/heads | sed -e 's-refs/heads/--' | fzf --ansi -m --reverse | awk '{print $1}' | xargs git checkout
+  git for-each-ref --sort='-authordate' --format='%1B[0;34m%(refname:short)%1B[m ===> %1B[1;35m%(subject)' refs/heads | sed -e 's-refs/heads/--' | fzf --ansi --reverse | awk '{print $1}' | xargs git checkout
 }
 
 git_add_patch_file(){
-  git status --untracked-files=no | fzf --reverse | awk '{print $2}' | xargs git add -p
+  git status --untracked-files=no | fzf --reverse | sed -E 's/^[^:]*:[[:space:]]*//; s/.* -> //' | xargs git add -p
 }
 
 git_pull_current_branch(){
